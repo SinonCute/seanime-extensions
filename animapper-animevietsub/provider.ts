@@ -36,6 +36,11 @@ type AniMapperSearchResponse = {
     hasNextPage: boolean
 }
 
+type AniMapperServersResponse = {
+    provider: string
+    servers: string[]
+}
+
 type AniMapperEpisodesResponse = {
     provider: string
     limit: number
@@ -59,30 +64,14 @@ type AniMapperSourceResponse = {
 
 class Provider {
     private apiBaseUrl: string
-    private cachedServers: string[] = ["DU", "HDX"] // Default fallback servers
-
     constructor() {
         this.apiBaseUrl = API_BASE_URL
     }
 
     getSettings(): Settings {
         return {
-            episodeServers: this.cachedServers,
+            episodeServers: ["AnimeVsub"],
             supportsDub: false,
-        }
-    }
-    
-    private updateServersFromEpisodes(episodes: AniMapperEpisodesResponse["episodes"]): void {
-        const servers = new Set<string>()
-        
-        for (const episode of episodes) {
-            if (episode.server) {
-                servers.add(episode.server)
-            }
-        }
-        
-        if (servers.size > 0) {
-            this.cachedServers = Array.from(servers).sort()
         }
     }
 
@@ -180,8 +169,6 @@ class Provider {
                     break
                 }
                 
-                this.updateServersFromEpisodes(data.episodes)
-
                 for (const episode of data.episodes) {
                     const episodeNumberStr = episode.episodeNumber.trim()
                     
@@ -207,14 +194,14 @@ class Provider {
                     // Ensure number is always an integer - use bitwise OR to force integer conversion
                     const episodeNumberInt = (parseInt(baseNumber.toString(), 10)) | 0
                     
-                    const episodeDetail: EpisodeDetails & { episodeNumberStr?: string; server?: string } = {
+                    const episodeDetail: EpisodeDetails & { episodeNumberStr?: string; server?: string; mediaId?: number } = {
                         id: episode.episodeId,
                         number: episodeNumberInt,
                         url: "",
                         title: title,
                     }
                     episodeDetail.episodeNumberStr = episodeNumberStr
-                    // Store server information if available from API
+                    episodeDetail.mediaId = mediaId
                     if (episode.server) {
                         episodeDetail.server = episode.server
                     }
@@ -232,9 +219,23 @@ class Provider {
                 throw new Error("No episodes found.")
             }
 
+            // Remove duplicates: if same episode number exists, keep only one
+            const seenEpisodes = new Map<string, EpisodeDetails & { episodeNumberStr?: string; server?: string; mediaId?: number }>()
+            
+            for (const episode of allEpisodes) {
+                const episodeNumberStr = (episode as any).episodeNumberStr || episode.number.toString()
+                
+                // Use episodeNumberStr as the key for deduplication
+                if (!seenEpisodes.has(episodeNumberStr)) {
+                    seenEpisodes.set(episodeNumberStr, episode)
+                }
+            }
+            
+            const deduplicatedEpisodes = Array.from(seenEpisodes.values())
+
             // Sort episodes by parsing the episode number string
             // This handles formats like "195", "195_1", "195_2", "195-196-197", "195_end"
-            allEpisodes.sort((a, b) => {
+            deduplicatedEpisodes.sort((a, b) => {
                 const aStr = (a as any).episodeNumberStr || a.number.toString()
                 const bStr = (b as any).episodeNumberStr || b.number.toString()
                 
@@ -293,12 +294,12 @@ class Provider {
                 return aStr.localeCompare(bStr)
             })
             
-            allEpisodes.forEach(ep => {
+            deduplicatedEpisodes.forEach(ep => {
                 delete (ep as any).episodeNumberStr
                 ep.number = (ep.number | 0)
             })
 
-            return allEpisodes
+            return deduplicatedEpisodes
         } catch (error) {
             console.error("AniMapper findEpisodes error:", error)
             throw error
@@ -307,12 +308,14 @@ class Provider {
 
     async findEpisodeServer(episode: EpisodeDetails, server: string): Promise<EpisodeServer> {
         try {
+            const mediaId = (episode as any).mediaId
+            
             const episodeServer = (episode as any).server
-            let serverName = server && server !== "default" ? server : (episodeServer || "DU")
+            let serverName = server && server !== "default" ? server : (episodeServer || "AnimeVsub")
             
             const episodeData = episode.id
 
-            const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}&server=${serverName}`
+            const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}`
             const res = await fetch(sourceUrl)
 
             if (!res.ok) {

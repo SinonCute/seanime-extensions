@@ -7,7 +7,7 @@
   "author": "Sinon (Hien Cao)",
   "type": "onlinestream-provider",
   "language": "typescript",
-  "lang": "",
+  "lang": "vi",
   "payload": "",
   "payloadURI": "https://raw.githubusercontent.com/SinonCute/seanime-extensions/main/animapper-animevietsub/provider.ts"
 }
