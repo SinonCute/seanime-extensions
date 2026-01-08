@@ -2,7 +2,7 @@
   "id": "animapper-animevietsub",
   "name": "AniMapper AnimeVietSub",
   "description": "AnimeVietSub provider using AniMapper API for streaming anime with Vietnamese subtitles",
-  "manifestURI": "",
+  "manifestURI": "https://raw.githubusercontent.com/SinonCute/seanime-extensions/main/animapper-animevietsub/animapper-animevietsub.json",
   "version": "1.0.0",
   "author": "Sinon (Hien Cao)",
   "type": "onlinestream-provider",
