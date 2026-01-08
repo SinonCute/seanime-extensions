@@ -186,8 +186,8 @@ class Provider {
                         ? `Episode ${episodeNumberStr}` 
                         : `Episode ${episodeNumber}`
                     
-                    // HAIZZZ
-                    const episodeNumberInt = parseInt(episodeNumber.toString(), 10)
+                    // Ensure number is always an integer - use bitwise OR to force integer conversion
+                    const episodeNumberInt = (parseInt(baseNumber.toString(), 10)) | 0
                     
                     const episodeDetail: EpisodeDetails & { episodeNumberStr?: string } = {
                         id: episode.episodeId,
@@ -265,8 +265,7 @@ class Provider {
             
             allEpisodes.forEach(ep => {
                 delete (ep as any).episodeNumberStr
-                // Final safeguard: ensure number is always an integer
-                ep.number = parseInt(ep.number.toString(), 10)
+                ep.number = (ep.number | 0)
             })
 
             return allEpisodes
