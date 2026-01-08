@@ -1,0 +1,291 @@
+/// <reference path="./onlinestream-provider.d.ts" />
+/// <reference path="./core.d.ts" />
+
+// AniMapper API base URL - can be configured
+const API_BASE_URL = "https://api.animapper.net"
+const PROVIDER_NAME = "ANIMEVIETSUB"
+
+// AniMapper API response types
+type AniMapperSearchResponse = {
+    success: boolean
+    results: Array<{
+        id: number
+        mediaType: string
+        titles: {
+            en?: string
+            ja?: string
+            vi?: string
+        }
+        images?: {
+            coverXl?: string
+            coverLg?: string
+            coverMd?: string
+        }
+        status?: string
+        providers?: {
+            [key: string]: {
+                providerMediaId: string
+                similarity: number
+                mappingType: string
+            }
+        }
+    }>
+    total: number
+    limit: number
+    offset: number
+    hasNextPage: boolean
+}
+
+type AniMapperEpisodesResponse = {
+    provider: string
+    limit: number
+    offset: number
+    total: number
+    hasNextPage: boolean
+    episodes: Array<{
+        episodeNumber: string
+        episodeId: string
+    }>
+}
+
+type AniMapperSourceResponse = {
+    server: string
+    type: string
+    corsProxyRequired: boolean
+    proxyHeaders: Record<string, string> | null
+    url: string
+}
+
+class Provider {
+    private apiBaseUrl: string
+
+    constructor() {
+        this.apiBaseUrl = API_BASE_URL
+    }
+
+    getSettings(): Settings {
+        return {
+            episodeServers: ["DU", "HDX"],
+            supportsDub: false,
+        }
+    }
+
+    async search(opts: SearchOptions): Promise<SearchResult[]> {
+        try {
+            if (opts.media?.id) {
+                const metadataUrl = `${this.apiBaseUrl}/api/v1/metadata?id=${opts.media.id}`
+                const metadataRes = await fetch(metadataUrl)
+                
+                if (metadataRes.ok) {
+                    const metadata = await metadataRes.json() as { 
+                        success: boolean
+                        result?: { 
+                            providers?: { [key: string]: any }
+                            titles?: { en?: string; vi?: string; ja?: string }
+                        } 
+                    }
+                    if (metadata.success && metadata.result?.providers?.[PROVIDER_NAME]) {
+                        const title = metadata.result.titles?.en || metadata.result.titles?.vi || metadata.result.titles?.ja || opts.media.englishTitle || opts.media.romajiTitle || opts.query
+                        return [{
+                            id: opts.media.id.toString(),
+                            title: title,
+                            url: "",
+                            subOrDub: "sub",
+                        }]
+                    }
+                }
+            }
+
+            const searchUrl = `${this.apiBaseUrl}/api/v1/search?title=${encodeURIComponent(opts.query)}&mediaType=ANIME&limit=20&offset=0`
+            const res = await fetch(searchUrl)
+
+            if (!res.ok) {
+                console.error(`AniMapper search failed: ${res.status} ${res.statusText}`)
+                return []
+            }
+
+            const data = await res.json() as AniMapperSearchResponse
+
+            if (!data.success || !data.results) {
+                return []
+            }
+
+            const results: SearchResult[] = []
+
+            for (const item of data.results) {
+                if (item.providers && !item.providers[PROVIDER_NAME]) {
+                    continue 
+                }
+
+                const title = item.titles.en || item.titles.vi || item.titles.ja || opts.query
+                results.push({
+                    id: item.id.toString(),
+                    title: title,
+                    url: "",
+                    subOrDub: "sub",
+                })
+            }
+
+            return results
+        } catch (error) {
+            console.error("AniMapper search error:", error)
+            return []
+        }
+    }
+
+    async findEpisodes(id: string): Promise<EpisodeDetails[]> {
+        try {
+            const mediaId = parseInt(id)
+            if (isNaN(mediaId)) {
+                throw new Error(`Invalid media ID: ${id}`)
+            }
+
+            let offset = 0
+            const limit = 100
+            const allEpisodes: EpisodeDetails[] = []
+
+            while (true) {
+                const episodesUrl = `${this.apiBaseUrl}/api/v1/stream/episodes?id=${mediaId}&provider=${PROVIDER_NAME}&limit=${limit}&offset=${offset}`
+                const res = await fetch(episodesUrl)
+
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        const errorData = await res.json().catch(() => ({}))
+                        if (errorData.code === "MAPPING_NOT_FOUND" || errorData.code === "EPISODES_NOT_FOUND") {
+                            throw new Error(`No episodes found for media ID: ${mediaId}`)
+                        }
+                    }
+                    throw new Error(`Failed to fetch episodes: ${res.status} ${res.statusText}`)
+                }
+
+                const data = await res.json() as AniMapperEpisodesResponse
+
+                if (!data.episodes || data.episodes.length === 0) {
+                    break
+                }
+
+                for (const episode of data.episodes) {
+                    const episodeNumberStr = episode.episodeNumber.trim()
+                    
+                    const baseNumberMatch = episodeNumberStr.match(/^(\d+)/)
+                    if (!baseNumberMatch) {
+                        continue
+                    }
+                    
+                    const baseNumber = parseFloat(baseNumberMatch[1])
+                    if (isNaN(baseNumber)) {
+                        continue
+                    }
+                    
+                    const hasUnderscoreSuffix = episodeNumberStr.includes("_")
+                    const hasDashRange = episodeNumberStr.includes("-") && episodeNumberStr.split("-").length > 1
+                    
+                    // For sorting: use base number + small offset for special formats
+                    // This ensures "195" < "195_1" < "195_2" < "195-196-197" < "195_end" < "196"
+                    let sortNumber = baseNumber
+                    
+                    if (hasUnderscoreSuffix) {
+                        const suffix = episodeNumberStr.substring(episodeNumberStr.indexOf("_"))
+                        // Extract numeric suffix if available (e.g., "_1" -> 0.001, "_2" -> 0.002)
+                        const suffixMatch = suffix.match(/_(\d+)/)
+                        if (suffixMatch) {
+                            // Use 10000 to allow up to 9999 duplicate episodes per base number
+                            sortNumber = baseNumber + (parseFloat(suffixMatch[1]) / 10000)
+                        } else if (suffix.toLowerCase() === "_end") {
+                            // "_end" comes after numeric suffixes and ranges
+                            sortNumber = baseNumber + 0.9999
+                        } else {
+                            // Other suffixes (e.g., "_special", "_final") get a medium offset
+                            sortNumber = baseNumber + 0.5
+                        }
+                    } else if (hasDashRange) {
+                        // Range episodes (e.g., "195-196-197") come after regular episodes but before "_end"
+                        // Use a small offset to place them after single episodes
+                        sortNumber = baseNumber + 0.8
+                    }
+                    
+                    const title = (hasUnderscoreSuffix || hasDashRange)
+                        ? `Episode ${episodeNumberStr}` 
+                        : `Episode ${baseNumber}`
+                    
+                    allEpisodes.push({
+                        id: episode.episodeId,
+                        number: sortNumber,
+                        url: "",
+                        title: title,
+                    })
+                }
+
+                if (!data.hasNextPage) {
+                    break
+                }
+
+                offset += limit
+            }
+
+            if (allEpisodes.length === 0) {
+                throw new Error("No episodes found.")
+            }
+
+            allEpisodes.sort((a, b) => a.number - b.number)
+
+            return allEpisodes
+        } catch (error) {
+            console.error("AniMapper findEpisodes error:", error)
+            throw error
+        }
+    }
+
+    async findEpisodeServer(episode: EpisodeDetails, server: string): Promise<EpisodeServer> {
+        try {
+            const serverName = server && server !== "default" ? server : "DU"
+            
+            const episodeData = episode.id
+
+            const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}&server=${serverName}`
+            const res = await fetch(sourceUrl)
+
+            if (!res.ok) {
+                throw new Error(`Failed to fetch episode source: ${res.status} ${res.statusText}`)
+            }
+
+            const data = await res.json() as AniMapperSourceResponse
+
+            let videoType: VideoSourceType = "unknown"
+            if (data.type === "HLS" || data.url.includes(".m3u8") || data.url.includes("/m3u8/")) {
+                videoType = "m3u8"
+            } else if (data.type === "EMBED") {
+                // Not support
+                videoType = "unknown"
+            } else if (data.url.includes(".mp4")) {
+                videoType = "mp4"
+            }
+
+            let finalUrl = data.url
+            if (finalUrl.startsWith("/")) {
+                finalUrl = `${this.apiBaseUrl}${finalUrl}`
+            }
+
+            const headers: Record<string, string> = {}
+            if (data.proxyHeaders) {
+                Object.assign(headers, data.proxyHeaders)
+            }
+
+            const result: EpisodeServer = {
+                server: serverName,
+                headers: headers,
+                videoSources: [{
+                    url: finalUrl,
+                    type: videoType,
+                    quality: "auto",
+                    subtitles: [],
+                }],
+            }
+
+            return result
+        } catch (error) {
+            console.error("AniMapper findEpisodeServer error:", error)
+            throw error
+        }
+    }
+}
