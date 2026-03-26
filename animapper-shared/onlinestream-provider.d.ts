@@ -80,3 +80,4 @@ declare abstract class AnimeProvider {
 
     getSettings(): Settings
 }
+

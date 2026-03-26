@@ -1,7 +1,9 @@
-/// <reference path="./onlinestream-provider.d.ts" />
-/// <reference path="./core.d.ts" />
+/// <reference path="../animapper-shared/onlinestream-provider.d.ts" />
+/// <reference path="../animapper-shared/core.d.ts" />
  
-class Provider {
+(() => {
+
+class ProviderImpl {
 
     getSettings(): Settings {
         return {
@@ -47,3 +49,6 @@ class Provider {
         }
     }
 }
+
+;(globalThis as any).Provider = ProviderImpl
+})()

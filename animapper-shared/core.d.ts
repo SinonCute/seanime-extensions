@@ -220,101 +220,36 @@ declare class CryptoJSEncoder {
  */
 
 declare class DocSelection {
-    // Retrieves the value of the specified attribute for the first element in the DocSelection.
-    // To get the value for each element individually, use a looping construct such as each or map.
     attr(name: string): string | undefined;
-
-    // Returns an object containing the attributes of the first element in the DocSelection.
     attrs(): { [key: string]: string };
-
-    // Gets the child elements of each element in the DocSelection, optionally filtered by a selector.
     children(selector?: string): DocSelection;
-
-    // For each element in the DocSelection, gets the first ancestor that matches the selector by testing the element itself
-    // and traversing up through its ancestors in the DOM tree.
     closest(selector?: string): DocSelection;
-
-    // Gets the children of each element in the DocSelection, including text and comment nodes.
     contents(): DocSelection;
-
-    // Gets the children of each element in the DocSelection, filtered by the specified selector.
     contentsFiltered(selector: string): DocSelection;
-
-    // Gets the value of a data attribute for the first element in the DocSelection.
-    // If no name is provided, returns an object containing all data attributes.
     data<T extends string | undefined>(name?: T): T extends string ? (string | undefined) : { [key: string]: string };
-
-    // Iterates over each element in the DocSelection, executing a function for each matched element.
     each(callback: (index: number, element: DocSelection) => void): DocSelection;
-
-    // Ends the most recent filtering operation in the current chain and returns the set of matched elements to its previous state.
     end(): DocSelection;
-
-    // Reduces the set of matched elements to the one at the specified index. If a negative index is given, it counts backwards starting at the end
-    // of the set.
     eq(index: number): DocSelection;
-
-    // Filters the set of matched elements to those that match the selector.
     filter(selector: string | ((index: number, element: DocSelection) => boolean)): DocSelection;
-
-    // Gets the descendants of each element in the DocSelection, filtered by a selector.
     find(selector: string): DocSelection;
-
-    // Reduces the set of matched elements to the first element in the DocSelection.
     first(): DocSelection;
-
-    // Reduces the set of matched elements to those that have a descendant that matches the selector.
     has(selector: string): DocSelection;
-
-    // Gets the combined text contents of each element in the DocSelection, including their descendants.
     text(): string;
-
-    // Gets the HTML contents of the first element in the DocSelection.
     html(): string | null;
-
-    // Checks the set of matched elements against a selector and returns true if at least one of these elements matches.
     is(selector: string | ((index: number, element: DocSelection) => boolean)): boolean;
-
-    // Reduces the set of matched elements to the last element in the DocSelection.
     last(): DocSelection;
-
-    // Gets the number of elements in the DocSelection.
     length(): number;
-
-    // Passes each element in the current matched set through a function, producing an array of the return values.
     map<T>(callback: (index: number, element: DocSelection) => T): T[];
-
-    // Gets the next sibling of each element in the DocSelection, optionally filtered by a selector.
     next(selector?: string): DocSelection;
-
-    // Gets all following siblings of each element in the DocSelection, optionally filtered by a selector.
     nextAll(selector?: string): DocSelection;
-
-    // Gets the next siblings of each element in the DocSelection, up to but not including the element matched by the selector.
     nextUntil(selector: string, until?: string): DocSelection;
-
-    // Removes elements from the DocSelection that match the selector.
     not(selector: string | ((index: number, element: DocSelection) => boolean)): DocSelection;
-
-    // Gets the parent of each element in the DocSelection, optionally filtered by a selector.
     parent(selector?: string): DocSelection;
-
-    // Gets the ancestors of each element in the DocSelection, optionally filtered by a selector.
     parents(selector?: string): DocSelection;
-
-    // Gets the ancestors of each element in the DocSelection, up to but not including the element matched by the selector.
     parentsUntil(selector: string, until?: string): DocSelection;
-
-    // Gets the previous sibling of each element in the DocSelection, optionally filtered by a selector.
     prev(selector?: string): DocSelection;
-
-    // Gets all preceding siblings of each element in the DocSelection, optionally filtered by a selector.
     prevAll(selector?: string): DocSelection;
-
-    // Gets the previous siblings of each element in the DocSelection, up to but not including the element matched by the selector.
     prevUntil(selector: string, until?: string): DocSelection;
-
-    // Gets the siblings of each element in the DocSelection, optionally filtered by a selector.
     siblings(selector?: string): DocSelection;
 }
 
@@ -333,11 +268,6 @@ declare interface DocSelectionFunction {
  */
 
 declare interface $torrentUtils {
-    /**
-     * Get a magnet link from a base64 encoded torrent data
-     * @param b64 - The base64 encoded torrent data
-     * @returns The magnet link
-     */
     getMagnetLinkFromTorrentData(b64: string): string
 }
 
@@ -346,221 +276,53 @@ declare interface $torrentUtils {
  */
 
 declare interface ChromeBrowserOptions {
-    /** Timeout in seconds, defaults to 30 */
     timeout?: number;
-    /** CSS selector to wait for after page load */
     waitSelector?: string;
-    /** Milliseconds to wait after page load */
     waitDuration?: number;
-    /** Custom user agent */
     userAgent?: string;
-    /** Run in headless mode, defaults to true */
     headless?: boolean;
 }
 
 declare interface NewChromeBrowserOptions {
-    /** Timeout in seconds, defaults to 30 */
     timeout?: number;
-    /** Custom user agent */
     userAgent?: string;
-    /** Run in headless mode, defaults to true */
     headless?: boolean;
 }
 
 declare interface ChromeBrowser {
-    /**
-     * Navigate to a URL
-     * @param url - The URL to navigate to
-     */
     navigate(url: string): Promise<void>;
-
-    /**
-     * Wait for a selector to be visible
-     * @param selector - CSS selector
-     */
     waitVisible(selector: string): Promise<void>;
-
-    /**
-     * Wait for a selector to be ready
-     * @param selector - CSS selector
-     */
     waitReady(selector: string): Promise<void>;
-
-    /**
-     * Click on an element
-     * @param selector - CSS selector
-     */
     click(selector: string): Promise<void>;
-
-    /**
-     * Type text into an element
-     * @param selector - CSS selector
-     * @param keys - Text to type
-     */
     sendKeys(selector: string, keys: string): Promise<void>;
-
-    /**
-     * Evaluate JavaScript in the browser context
-     * @param jsCode - JavaScript code to evaluate
-     * @returns The result of the evaluation
-     */
     evaluate(jsCode: string): Promise<any>;
-
-    /**
-     * Get the inner HTML of an element
-     * @param selector - CSS selector
-     * @returns The inner HTML
-     */
     innerHTML(selector: string): Promise<string>;
-
-    /**
-     * Get the outer HTML of an element
-     * @param selector - CSS selector
-     * @returns The outer HTML
-     */
     outerHTML(selector: string): Promise<string>;
-
-    /**
-     * Get the text content of an element
-     * @param selector - CSS selector
-     * @returns The text content
-     */
     text(selector: string): Promise<string>;
-
-    /**
-     * Get an attribute value of an element
-     * @param selector - CSS selector
-     * @param attributeName - Name of the attribute
-     * @returns The attribute value or null if not found
-     */
     attribute(selector: string, attributeName: string): Promise<string | null>;
-
-    /**
-     * Capture a screenshot of a specific element
-     * @param selector - CSS selector
-     * @returns The screenshot as a byte array
-     */
     screenshot(selector: string): Promise<Uint8Array>;
-
-    /**
-     * Capture a full page screenshot
-     * @returns The screenshot as a byte array
-     */
     fullScreenshot(): Promise<Uint8Array>;
-
-    /**
-     * Sleep for a duration
-     * @param milliseconds - Duration in milliseconds
-     */
     sleep(milliseconds: number): Promise<void>;
-
-    /**
-     * Close the browser instance
-     */
     close(): Promise<void>;
 }
 
 declare class ChromeDP {
-    /**
-     * Create a new browser instance.
-     * The default timeout is 30 seconds.
-     * @param options - Browser options
-     * @returns A browser instance
-     */
     static newBrowser(options?: NewChromeBrowserOptions): Promise<ChromeBrowser>;
-
-    /**
-     * Navigate to a URL and return the HTML content
-     * @param url - The URL to scrape
-     * @param options - Scraping options
-     * @returns The HTML content
-     */
     static scrape(url: string, options?: ChromeBrowserOptions): Promise<string>;
-
-    /**
-     * Capture a screenshot of a webpage
-     * @param url - The URL to screenshot
-     * @param options - Screenshot options
-     * @returns The screenshot as a byte array
-     */
     static screenshot(url: string, options?: ChromeBrowserOptions): Promise<Uint8Array>;
-
-    /**
-     * Run JavaScript code in the browser context and return the result
-     * @param url - The URL to navigate to
-     * @param jsCode - JavaScript code to evaluate
-     * @param options - Evaluation options
-     * @returns The result of the evaluation
-     */
     static evaluate(url: string, jsCode: string, options?: ChromeBrowserOptions): Promise<any>;
 }
 
 declare namespace $store {
-    /**
-     * Sets a value in the store.
-     * @param key - The key to set
-     * @param value - The value to set
-     */
     function set(key: string, value: any): void
-
-    /**
-     * Gets a value from the store.
-     * @param key - The key to get
-     * @returns The value associated with the key
-     */
     function get<T = any>(key: string): T
-
-    /**
-     * Checks if a key exists in the store.
-     * @param key - The key to check
-     * @returns True if the key exists, false otherwise
-     */
     function has(key: string): boolean
-
-    /**
-     * Gets a value from the store or sets it if it doesn't exist.
-     * @param key - The key to get or set
-     * @param setFunc - The function to set the value
-     * @returns The value associated with the key
-     */
     function getOrSet<T = any>(key: string, setFunc: () => T): T
-
-    /**
-     * Sets a value in the store if it's less than the limit.
-     * @param key - The key to set
-     * @param value - The value to set
-     * @param maxAllowedElements - The maximum allowed elements
-     */
     function setIfLessThanLimit<T = any>(key: string, value: T, maxAllowedElements: number): boolean
-
-    /**
-     * Unmarshals a JSON string.
-     * @param data - The JSON string to unmarshal
-     */
     function unmarshalJSON(data: string): void
-
-    /**
-     * Marshals a value to a JSON string.
-     * @param value - The value to marshal
-     * @returns The JSON string
-     */
     function marshalJSON(value: any): string
-
-    /**
-     * Resets the store.
-     */
     function reset(): void
-
-    /**
-     * Gets all values from the store.
-     * @returns An array of all values in the store
-     */
     function values(): any[]
-
-    /**
-     * Watches a key in the store.
-     * @param key - The key to watch
-     * @param callback - The callback to call when the key changes
-     */
     function watch<T = any>(key: string, callback: (value: T) => void): void
 }
+

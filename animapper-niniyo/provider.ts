@@ -2,10 +2,9 @@
 /// <reference path="../animapper-shared/core.d.ts" />
 
 (() => {
-
 // AniMapper API base URL - can be configured
 const API_BASE_URL = "https://api.animapper.net"
-const PROVIDER_NAME = "ANIMEVIETSUB"
+const PROVIDER_NAME = "NINIYO"
 
 // AniMapper API response types
 type AniMapperSearchResponse = {
@@ -38,11 +37,6 @@ type AniMapperSearchResponse = {
     hasNextPage: boolean
 }
 
-type AniMapperServersResponse = {
-    provider: string
-    servers: string[]
-}
-
 type AniMapperEpisodesResponse = {
     provider: string
     limit: number
@@ -72,7 +66,7 @@ class ProviderImpl {
 
     getSettings(): Settings {
         return {
-            episodeServers: ["AnimeVsub"],
+            episodeServers: ["P16", "TIK"],
             supportsDub: false,
         }
     }
@@ -82,14 +76,14 @@ class ProviderImpl {
             if (opts.media?.id) {
                 const metadataUrl = `${this.apiBaseUrl}/api/v1/metadata?id=${opts.media.id}`
                 const metadataRes = await fetch(metadataUrl)
-                
+
                 if (metadataRes.ok) {
-                    const metadata = await metadataRes.json() as { 
+                    const metadata = await metadataRes.json() as {
                         success: boolean
-                        result?: { 
+                        result?: {
                             providers?: { [key: string]: any }
                             titles?: { en?: string; vi?: string; ja?: string }
-                        } 
+                        }
                     }
                     if (metadata.success && metadata.result?.providers?.[PROVIDER_NAME]) {
                         const title = metadata.result.titles?.en || metadata.result.titles?.vi || metadata.result.titles?.ja || opts.media.englishTitle || opts.media.romajiTitle || opts.query
@@ -121,7 +115,7 @@ class ProviderImpl {
 
             for (const item of data.results) {
                 if (item.providers && !item.providers[PROVIDER_NAME]) {
-                    continue 
+                    continue
                 }
 
                 const title = item.titles.en || item.titles.vi || item.titles.ja || opts.query
@@ -171,32 +165,31 @@ class ProviderImpl {
                 if (!data.episodes || data.episodes.length === 0) {
                     break
                 }
-                
+
                 for (const episode of data.episodes) {
                     const episodeNumberStr = episode.episodeNumber.trim()
-                    
+
                     const baseNumberMatch = episodeNumberStr.match(/^(\d+)/)
                     if (!baseNumberMatch) {
                         continue
                     }
-                    
+
                     const baseNumber = parseInt(baseNumberMatch[1], 10)
                     if (isNaN(baseNumber)) {
                         continue
                     }
-                    
+
                     const hasUnderscoreSuffix = episodeNumberStr.includes("_")
                     const hasDashRange = episodeNumberStr.includes("-") && episodeNumberStr.split("-").length > 1
-                    
+
                     const episodeNumber = baseNumber
-                    
+
                     const title = (hasUnderscoreSuffix || hasDashRange)
-                        ? `Episode ${episodeNumberStr}` 
+                        ? `Episode ${episodeNumberStr}`
                         : `Episode ${episodeNumber}`
-                    
-                    // Ensure number is always an integer - use bitwise OR to force integer conversion
+
                     const episodeNumberInt = (parseInt(baseNumber.toString(), 10)) | 0
-                    
+
                     const episodeDetail: EpisodeDetails & { episodeNumberStr?: string; server?: string; mediaId?: number } = {
                         id: episode.episodeId,
                         number: episodeNumberInt,
@@ -224,16 +217,16 @@ class ProviderImpl {
 
             // Remove duplicates: if same episode number exists, keep only one
             const seenEpisodes = new Map<string, EpisodeDetails & { episodeNumberStr?: string; server?: string; mediaId?: number }>()
-            
+
             for (const episode of allEpisodes) {
                 const episodeNumberStr = (episode as any).episodeNumberStr || episode.number.toString()
-                
+
                 // Use episodeNumberStr as the key for deduplication
                 if (!seenEpisodes.has(episodeNumberStr)) {
                     seenEpisodes.set(episodeNumberStr, episode)
                 }
             }
-            
+
             const deduplicatedEpisodes = Array.from(seenEpisodes.values())
 
             // Sort episodes by parsing the episode number string
@@ -241,29 +234,29 @@ class ProviderImpl {
             deduplicatedEpisodes.sort((a, b) => {
                 const aStr = (a as any).episodeNumberStr || a.number.toString()
                 const bStr = (b as any).episodeNumberStr || b.number.toString()
-                
+
                 const aBaseMatch = aStr.match(/^(\d+)/)
                 const bBaseMatch = bStr.match(/^(\d+)/)
-                
+
                 if (!aBaseMatch || !bBaseMatch) {
                     return aStr.localeCompare(bStr)
                 }
-                
+
                 const aBase = parseInt(aBaseMatch[1])
                 const bBase = parseInt(bBaseMatch[1])
-                
+
                 if (aBase !== bBase) {
                     return aBase - bBase
                 }
-                
+
                 const aHasUnderscore = aStr.includes("_")
                 const aHasDash = aStr.includes("-")
                 const bHasUnderscore = bStr.includes("_")
                 const bHasDash = bStr.includes("-")
-                
+
                 if (!aHasUnderscore && !aHasDash) return -1
                 if (!bHasUnderscore && !bHasDash) return 1
-                
+
                 if (aHasUnderscore && !aHasDash) {
                     const aSuffixMatch = aStr.match(/_(\d+)/)
                     if (aSuffixMatch) {
@@ -277,15 +270,15 @@ class ProviderImpl {
                         }
                     }
                 }
-                
+
                 if (aHasDash) {
                     if (bHasUnderscore && !bStr.match(/_(\d+)/)) return -1
                     if (bHasDash) return aStr.localeCompare(bStr)
                 }
-                
+
                 if (aStr.toLowerCase().endsWith("_end")) return 1
                 if (bStr.toLowerCase().endsWith("_end")) return -1
-                
+
                 if (aBase === bBase) {
                     const aServer = (a as any).server || ""
                     const bServer = (b as any).server || ""
@@ -293,10 +286,10 @@ class ProviderImpl {
                         return aServer.localeCompare(bServer)
                     }
                 }
-                
+
                 return aStr.localeCompare(bStr)
             })
-            
+
             deduplicatedEpisodes.forEach(ep => {
                 delete (ep as any).episodeNumberStr
                 ep.number = (ep.number | 0)
@@ -311,11 +304,9 @@ class ProviderImpl {
 
     async findEpisodeServer(episode: EpisodeDetails, server: string): Promise<EpisodeServer> {
         try {
-            const mediaId = (episode as any).mediaId
-            
             const episodeServer = (episode as any).server
-            let serverName = server && server !== "default" ? server : (episodeServer || "AnimeVsub")
-            
+            let serverName = server && server !== "default" ? server : (episodeServer || "P16")
+
             const episodeData = episode.id
 
             const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}`
@@ -368,3 +359,4 @@ class ProviderImpl {
 
 ;(globalThis as any).Provider = ProviderImpl
 })()
+
