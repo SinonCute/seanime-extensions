@@ -1,12 +1,13 @@
 # Seanime AniMapper Extensions
 
-Online streaming provider extensions for [Seanime](https://seanime.rahim.app/) that use the [AniMapper API](http://animapper.net/) to provide anime streaming with Vietnamese subtitles.
+Online streaming provider extensions for [Seanime](https://seanime.rahim.app/) that use the [AniMapper API](https://api.animapper.net/) to provide anime streaming (primarily Vietnamese subtitle sources).
 
 ## Supported Providers
 
 | Provider | Status | Servers | Description |
 |----------|--------|---------|-------------|
-| **AnimeVietSub** | ✅ Available | DU (HLS), HDX (Embed) | Vietnamese subtitles provider with full episode support |
+| **AnimeVietSub** | ✅ Available | AnimeVsub | Vietnamese subtitles provider via AniMapper |
+| **Niniyo** | ✅ Available | P16, TIK | Vietnamese subtitles provider via AniMapper |
 | **AnimeTVN** | 🚧 In Development | - | Coming soon |
 
 ## Extensions
@@ -14,9 +15,12 @@ Online streaming provider extensions for [Seanime](https://seanime.rahim.app/) t
 **Installation:**
 1. Open Seanime
 2. Go to Extensions settings
-3. Add the manifest URL:
+3. Add one of these manifest URLs:
    ```
    https://raw.githubusercontent.com/SinonCute/seanime-extensions/main/animapper-animevietsub/animapper-animevietsub.json
+   ```
+   ```
+   https://raw.githubusercontent.com/SinonCute/seanime-extensions/main/animapper-niniyo/animapper-niniyo.json
    ```
 
 ## Requirements
