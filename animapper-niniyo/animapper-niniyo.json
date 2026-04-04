@@ -3,7 +3,7 @@
   "name": "AniMapper Niniyo",
   "description": "Niniyo provider using AniMapper API for streaming",
   "manifestURI": "https://raw.githubusercontent.com/SinonCute/seanime-extensions/main/animapper-niniyo/animapper-niniyo.json",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Sinon (Hien Cao)",
   "type": "onlinestream-provider",
   "language": "typescript",
