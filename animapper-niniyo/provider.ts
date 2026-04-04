@@ -309,7 +309,7 @@ class ProviderImpl {
 
             const episodeData = episode.id
 
-            const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}`
+            const sourceUrl = `${this.apiBaseUrl}/api/v1/stream/source?episodeData=${encodeURIComponent(episodeData)}&provider=${PROVIDER_NAME}&server=${serverName}`
             const res = await fetch(sourceUrl)
 
             if (!res.ok) {
